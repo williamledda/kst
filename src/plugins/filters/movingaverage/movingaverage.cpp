@@ -17,6 +17,8 @@
 #include "objectstore.h"
 #include "ui_movingaverageconfig.h"
 
+#include <iostream>
+
 static const QString& VECTOR_IN   = "Vector In";
 static const QString& WINDOW_SIZE = "Window size";
 static const QString& VECTOR_OUT  = "Avg(Y)";
@@ -32,12 +34,14 @@ class ConfigMovingAveragePlugin : public Kst::DataObjectConfigWidget, public Ui_
 
     void setObjectStore(Kst::ObjectStore* store) { 
       _store = store; 
-      _vector->setObjectStore(store); 
+      _vector->setObjectStore(store);
+      _windowSize->setObjectStore(store);
     }
 
     void setupSlots(QWidget* dialog) {
       if (dialog) {
         connect(_vector, SIGNAL(selectionChanged(QString)), dialog, SIGNAL(modified()));
+        connect(_windowSize, SIGNAL(selectionChanged(QString)), dialog, SIGNAL(modified()));
       }
     }
 
@@ -53,12 +57,16 @@ class ConfigMovingAveragePlugin : public Kst::DataObjectConfigWidget, public Ui_
       _vector->setEnabled(!locked);
     }
 
-    Kst::VectorPtr selectedVector() { return _vector->selectedVector(); };
-    void setSelectedVector(Kst::VectorPtr vector) { return _vector->setSelectedVector(vector); };
+    Kst::VectorPtr selectedVector() { return _vector->selectedVector(); }
+    void setSelectedVector(Kst::VectorPtr vector) { return _vector->setSelectedVector(vector); }
+
+    Kst::ScalarPtr selectedScalar() { return _windowSize->selectedScalar(); }
+    void setSelectedScalar(Kst::ScalarPtr scalar) { return _windowSize->setSelectedScalar(scalar); }
 
     virtual void setupFromObject(Kst::Object* dataObject) {
       if (MovingAverageSource* source = static_cast<MovingAverageSource*>(dataObject)) {
         setSelectedVector(source->vector());
+        setSelectedScalar(source->windowSize());
       }
     }
 
@@ -82,6 +90,7 @@ class ConfigMovingAveragePlugin : public Kst::DataObjectConfigWidget, public Ui_
       if (_cfg) {
         _cfg->beginGroup("Moving Average DataObject Plugin");
         _cfg->setValue("Input Vector", _vector->selectedVector()->Name());
+        _cfg->setValue("Input Scalar", _windowSize->selectedScalar()->Name());
         _cfg->endGroup();
       }
     }
@@ -95,6 +104,9 @@ class ConfigMovingAveragePlugin : public Kst::DataObjectConfigWidget, public Ui_
         if (vector) {
           setSelectedVector(vector);
         }
+
+        QString scalarName = _cfg->value("Input Scalar").toString();
+        _windowSize->setSelectedScalar(scalarName);
         _cfg->endGroup();
       }
     }
@@ -134,7 +146,8 @@ QString MovingAverageSource::descriptionTip() const {
 
 void MovingAverageSource::change(Kst::DataObjectConfigWidget *configWidget) {
   if (ConfigMovingAveragePlugin* config = static_cast<ConfigMovingAveragePlugin*>(configWidget)) {
-    setInputVector(VECTOR_IN, config->selectedVector());
+    setInputVector(VECTOR_IN,   config->selectedVector());
+    setInputScalar(WINDOW_SIZE, config->selectedScalar());
   }
 }
 
@@ -143,31 +156,52 @@ void MovingAverageSource::setupOutputs() {
   setOutputVector(VECTOR_OUT, "");
 }
 
-
 // TODO
 bool MovingAverageSource::algorithm() {
-  Kst::VectorPtr inputVector = _inputVectors[VECTOR_IN];
-  Kst::VectorPtr outputVector;
-  // maintain kst file compatibility if the output vector name is changed.
-  if (_outputVectors.contains(VECTOR_OUT)) {
-    outputVector = _outputVectors[VECTOR_OUT];
-  } else {
-    outputVector = _outputVectors.values().at(0);
-  }
+    Kst::VectorPtr inputVector = _inputVectors[VECTOR_IN];
+    Kst::ScalarPtr inputScalar = _inputScalars[WINDOW_SIZE];
+    Kst::VectorPtr outputVector;
+    // maintain kst file compatibility if the output vector name is changed.
+    if (_outputVectors.contains(VECTOR_OUT)) {
+      outputVector = _outputVectors[VECTOR_OUT];
+    } else {
+      outputVector = _outputVectors.values().at(0);
+    }
 
 
-  /* Memory allocation */
-  outputVector->resize(inputVector->length(), true);
+    /* Memory allocation */
+    outputVector->resize(inputVector->length(), true);
 
-  double const *v_in = inputVector->noNanValue();
-  double *v_out = outputVector->raw_V_ptr();
-  v_out[0] = v_in[0]; // i = 1
+    double const *v_in = inputVector->noNanValue();
+    double *v_out = outputVector->raw_V_ptr();
+    int w_size = static_cast<int>(inputScalar->value());
+    int len = inputVector->length();
+    double sum = 0.0;
+    int counter = 0;
+    int head = 0;
 
-  for (int i = 1; i < inputVector->length(); ++i) {
-    v_out[i] = (v_in[i] + (i * v_out[i-1])) / (i+1);
-  }
+    sum = v_out[0] = v_in[0];
+    counter++;
 
-  return true;
+    for (int i = 1; i < len; i++) {
+     sum += v_in[i]; //Just add the next value
+     if (counter % w_size == 0) {
+        sum -= v_in[head++]; //Window is full, remove the head value!
+     }
+     else {
+        //inc counter till the first window size, then just move the head...
+        counter++;
+     }
+
+    v_out[i] = sum/counter;
+
+   }
+
+   Kst::LabelInfo label_info = inputVector->labelInfo();
+   label_info.name = tr("%1 window avg %2").arg(label_info.name).arg(w_size);
+   outputVector->setLabelInfo(label_info);
+
+   return true;
 }
 
 
@@ -175,26 +209,27 @@ Kst::VectorPtr MovingAverageSource::vector() const {
   return _inputVectors[VECTOR_IN];
 }
 
+Kst::ScalarPtr MovingAverageSource::windowSize() const
+{
+    return _inputScalars[WINDOW_SIZE];
+}
+
 
 QStringList MovingAverageSource::inputVectorList() const {
   return QStringList( VECTOR_IN );
 }
 
-
 QStringList MovingAverageSource::inputScalarList() const {
-  return QStringList( /*SCALAR_IN*/ );
+  return QStringList( WINDOW_SIZE );
 }
-
 
 QStringList MovingAverageSource::inputStringList() const {
   return QStringList( /*STRING_IN*/ );
 }
 
-
 QStringList MovingAverageSource::outputVectorList() const {
   return QStringList( VECTOR_OUT );
 }
-
 
 QStringList MovingAverageSource::outputScalarList() const {
   return QStringList( /*SCALAR_OUT*/ );
@@ -223,6 +258,7 @@ Kst::DataObject *MovingAveragePlugin::create(Kst::ObjectStore *store, Kst::DataO
     MovingAverageSource* object = store->createObject<MovingAverageSource>();
 
     if (setupInputsOutputs) {
+      object->setInputScalar(WINDOW_SIZE, config->selectedScalar());
       object->setupOutputs();
       object->setInputVector(VECTOR_IN, config->selectedVector());
     }

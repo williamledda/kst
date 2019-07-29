@@ -29,6 +29,7 @@ class MovingAverageSource : public Kst::BasicPlugin {
     virtual QString descriptionTip() const;
 
     Kst::VectorPtr vector() const;
+    Kst::ScalarPtr windowSize() const;
 
     virtual void change(Kst::DataObjectConfigWidget *configWidget);
 
@@ -52,7 +53,6 @@ class MovingAverageSource : public Kst::BasicPlugin {
 
 
 };
-
 
 class MovingAveragePlugin : public QObject, public Kst::DataObjectPluginInterface {
     Q_OBJECT
