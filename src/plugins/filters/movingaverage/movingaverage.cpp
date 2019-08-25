@@ -1,9 +1,7 @@
 /***************************************************************************
  *                                                                         *
- *   copyright : (C) 2007 The University of Toronto                        *
- *                   netterfield@astro.utoronto.ca                         *
- *   copyright : (C) 2005  University of British Columbia                  *
- *                   dscott@phas.ubc.ca                                    *
+ *   copyright : (C) 2019 William Ledda                                    *
+ *                   villy80@hotmail.it                                    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
@@ -16,8 +14,6 @@
 #include "movingaverage.h"
 #include "objectstore.h"
 #include "ui_movingaverageconfig.h"
-
-#include <iostream>
 
 static const QString& VECTOR_IN   = "Vector In";
 static const QString& WINDOW_SIZE = "Window size";
@@ -57,32 +53,33 @@ class ConfigMovingAveragePlugin : public Kst::DataObjectConfigWidget, public Ui_
       _vector->setEnabled(!locked);
     }
 
-    Kst::VectorPtr selectedVector() { return _vector->selectedVector(); }
-    void setSelectedVector(Kst::VectorPtr vector) { return _vector->setSelectedVector(vector); }
+    Kst::VectorPtr selectedVector() {
+        return _vector->selectedVector();
+    }
 
-    Kst::ScalarPtr selectedScalar() { return _windowSize->selectedScalar(); }
-    void setSelectedScalar(Kst::ScalarPtr scalar) { return _windowSize->setSelectedScalar(scalar); }
+    void setSelectedVector(Kst::VectorPtr vector) {
+        return _vector->setSelectedVector(vector);
+    }
+
+    Kst::ScalarPtr selectedScalar() {
+        return _windowSize->selectedScalar();
+    }
+
+    void setSelectedWindowScalar(Kst::ScalarPtr scalar) {
+        return _windowSize->setSelectedScalar(scalar);
+    }
 
     virtual void setupFromObject(Kst::Object* dataObject) {
       if (MovingAverageSource* source = static_cast<MovingAverageSource*>(dataObject)) {
         setSelectedVector(source->vector());
-        setSelectedScalar(source->windowSize());
+        setSelectedWindowScalar(source->windowSize());
       }
     }
 
     virtual bool configurePropertiesFromXml(Kst::ObjectStore *store, QXmlStreamAttributes& attrs) {
       Q_UNUSED(store);
       Q_UNUSED(attrs);
-
-      bool validTag = true;
-
-//       QStringRef av;
-//       av = attrs.value("value");
-//       if (!av.isNull()) {
-//         _configValue = QVariant(av.toString()).toBool();
-//       }
-
-      return validTag;
+      return true;
     }
 
   public slots:
@@ -161,6 +158,7 @@ bool MovingAverageSource::algorithm() {
     Kst::VectorPtr inputVector = _inputVectors[VECTOR_IN];
     Kst::ScalarPtr inputScalar = _inputScalars[WINDOW_SIZE];
     Kst::VectorPtr outputVector;
+    int len = inputVector->length();
     // maintain kst file compatibility if the output vector name is changed.
     if (_outputVectors.contains(VECTOR_OUT)) {
       outputVector = _outputVectors[VECTOR_OUT];
@@ -170,12 +168,12 @@ bool MovingAverageSource::algorithm() {
 
 
     /* Memory allocation */
-    outputVector->resize(inputVector->length(), true);
+    outputVector->resize(len, true);
 
     double const *v_in = inputVector->noNanValue();
     double *v_out = outputVector->raw_V_ptr();
-    int w_size = static_cast<int>(inputScalar->value());
-    int len = inputVector->length();
+    unsigned int w_size = static_cast<unsigned int>(inputScalar->value());
+
     double sum = 0.0;
     int counter = 0;
     int head = 0;
@@ -184,24 +182,23 @@ bool MovingAverageSource::algorithm() {
     counter++;
 
     for (int i = 1; i < len; i++) {
-     sum += v_in[i]; //Just add the next value
-     if (counter % w_size == 0) {
-        sum -= v_in[head++]; //Window is full, remove the head value!
-     }
-     else {
-        //inc counter till the first window size, then just move the head...
-        counter++;
-     }
+        sum += v_in[i]; //Just add the next value
+        if (counter % w_size == 0) {
+            //Window is full, remove the head value and move head to the next element
+            sum -= v_in[head++];
+        }
+        else {
+            //Window is not full yet.
+            //Inc counter till the first window size without just moving the head...
+            counter++;
+        }
+        v_out[i] = sum/counter; //Compute current average
+    }
+    Kst::LabelInfo label_info = inputVector->labelInfo();
+    label_info.name = tr("%1 window avg %2").arg(label_info.name).arg(w_size);
+    outputVector->setLabelInfo(label_info);
 
-    v_out[i] = sum/counter;
-
-   }
-
-   Kst::LabelInfo label_info = inputVector->labelInfo();
-   label_info.name = tr("%1 window avg %2").arg(label_info.name).arg(w_size);
-   outputVector->setLabelInfo(label_info);
-
-   return true;
+    return true;
 }
 
 

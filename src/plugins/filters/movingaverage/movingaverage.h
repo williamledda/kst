@@ -1,9 +1,7 @@
 /***************************************************************************
  *                                                                         *
- *   copyright : (C) 2007 The University of Toronto                        *
- *                   netterfield@astro.utoronto.ca                         *
- *   copyright : (C) 2005  University of British Columbia                  *
- *                   dscott@phas.ubc.ca                                    *
+ *   copyright : (C) 2019 William Ledda                                    *
+ *                   villy80@hotmail.it                                    *
  *                                                                         *
  *   This program is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
