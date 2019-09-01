@@ -26,6 +26,7 @@ kst_add_plugin(filters window)
 kst_add_plugin(filters differentiation)
 kst_add_plugin(filters exponential)
 kst_add_plugin(filters movingaverage)
+kst_add_plugin(filters alphabeta)
 
 if(gsl)
 	include_directories(${GSL_INCLUDE_DIR})
