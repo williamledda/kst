@@ -60,6 +60,8 @@ const char AsciiSourceConfig::Key_limitFileBufferSize[] = "Size of limited file 
 const char AsciiSourceConfig::Tag_limitFileBufferSize[] = "limitFileBufferSize";
 const char AsciiSourceConfig::Key_useThreads[] = "Use threads when parsing Ascii data";
 const char AsciiSourceConfig::Tag_useThreads[] = "useThreads";
+const char AsciiSourceConfig::Key_fileRolling[] = "Reload when file size is less than previous";
+const char AsciiSourceConfig::Tag_fileRolling[] = "fileRolling";
 const char AsciiSourceConfig::Key_dataRate[] = "Data Rate for index";
 const char AsciiSourceConfig::Tag_dataRate[] = "dataRate";
 const char AsciiSourceConfig::Key_offsetDateTime[] = "use an explicit date/time offset";
@@ -96,6 +98,7 @@ AsciiSourceConfig::AsciiSourceConfig() :
   _limitFileBuffer(false),
   _limitFileBufferSize(100),
   _useThreads(false),
+  _fileRolling(false),
   _dataRate(1.0),
   _offsetDateTime(false),
   _offsetFileDate(false),
@@ -127,6 +130,7 @@ void AsciiSourceConfig::save(QSettings& cfg) const {
   _limitFileBuffer >> cfg;
   _limitFileBufferSize >> cfg;
   _useThreads >> cfg;
+  _fileRolling >> cfg;
   _timeAsciiFormatString >> cfg;
   _dataRate >> cfg;
   _offsetDateTime >> cfg;
@@ -175,6 +179,7 @@ void AsciiSourceConfig::read(QSettings& cfg) {
   _limitFileBuffer << cfg;
   _limitFileBufferSize << cfg;
   _useThreads << cfg;
+  _fileRolling << cfg;
   _timeAsciiFormatString << cfg;
   _dataRate << cfg;
   _offsetDateTime << cfg;
@@ -226,6 +231,7 @@ void AsciiSourceConfig::save(QXmlStreamWriter& s) {
   _limitFileBuffer >> s;
   _limitFileBufferSize >> s;
   _useThreads >> s;
+  _fileRolling >> s;
   _timeAsciiFormatString >> s;
   _dataRate >> s;
   _offsetDateTime >> s;
@@ -257,6 +263,7 @@ void AsciiSourceConfig::parseProperties(QXmlStreamAttributes& attributes) {
   _limitFileBuffer << attributes;
   _limitFileBufferSize << attributes;
   _useThreads << attributes;
+  _fileRolling << attributes;
   _timeAsciiFormatString << attributes;
   _dataRate << attributes;
   _offsetDateTime << attributes;
@@ -292,6 +299,7 @@ void AsciiSourceConfig::load(const QDomElement& e) {
         _limitFileBuffer << elem;
         _limitFileBufferSize << elem;
         _useThreads << elem;
+        _fileRolling << elem;
         _timeAsciiFormatString << elem;
         _dataRate << elem;
         _offsetDateTime << elem;
@@ -327,6 +335,7 @@ bool AsciiSourceConfig::operator==(const AsciiSourceConfig& rhs) const
       _limitFileBuffer == rhs._limitFileBuffer &&
       _limitFileBufferSize == rhs._limitFileBufferSize &&
       _useThreads == rhs._useThreads &&
+      _fileRolling == rhs._fileRolling &&
       _timeAsciiFormatString == rhs._timeAsciiFormatString &&
       _dataRate == rhs._dataRate &&
       _offsetDateTime == rhs._offsetDateTime &&

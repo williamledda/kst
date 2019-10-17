@@ -14,7 +14,6 @@
 #include "asciidatainterfaces.h"
 
 #include "curve.h"
-#include "colorsequence.h"
 #include "objectstore.h"
 
 #include "math_kst.h"
@@ -29,14 +28,12 @@
 #include <QThread>
 #include <QtConcurrentRun>
 #include <QFutureSynchronizer>
-#include <QLabel>
 #include <QApplication>
 #include <QVBoxLayout>
-#include <QProgressBar>
 
 
-#include <ctype.h>
 #include <stdlib.h>
+#include <updatemanager.h>
 
 
 using namespace Kst;
@@ -225,6 +222,18 @@ Kst::Object::UpdateType AsciiSource::internalDataSourceUpdate(bool read_complete
   bool force_update = true;
   if (_fileSize == file.size()) {
     force_update = false;
+  }
+
+  //Check if file has been overwritten, and reload in case file rolling option is selected
+  if(_fileSize < _lastFileSize) {
+    if(this->_config._fileRolling) {
+      emit UpdateManager::self()->askToReload();
+      //Do nothing right now. Let the main application to handle reload.
+      return NoChange;
+    }
+    else {
+      Debug::self()->notice("File size is less than previous (overwritten?). Consider to enable file rolling");
+    }
   }
 
   _fileCreationTime_t = QFileInfo(file).created().toTime_t();
