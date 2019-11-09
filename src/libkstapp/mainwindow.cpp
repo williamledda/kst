@@ -143,7 +143,8 @@ MainWindow::MainWindow() :
   connect(PlotItemManager::self(), SIGNAL(allPlotsTiedZoom()), this, SLOT(allPlotsTiedZoom()));
 
   readSettings();
-  connect(UpdateManager::self(), SIGNAL(objectsUpdated(qint64)), this, SLOT(updateViewItems(qint64)));
+  connect(UpdateManager::self(), SIGNAL(objectsUpdated(qint64)),  this, SLOT(updateViewItems(qint64)));
+  connect(UpdateManager::self(), SIGNAL(dataSourceAskToReload()), this, SLOT(reload()));
 
   QTimer::singleShot(0, this, SLOT(performHeavyStartupActions()));
 

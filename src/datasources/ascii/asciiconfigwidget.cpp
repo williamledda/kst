@@ -176,6 +176,7 @@ AsciiSourceConfig AsciiConfigWidgetInternal::config()
   config._limitFileBuffer = _limitFileBuffer->isChecked();
   config._limitFileBufferSize = (qint64)_limitFileBufferSize->value() * 1024 * 1024;
   config._useThreads =_useThreads->isChecked();
+  config._fileRolling =_fileRolling->isChecked();
   config._timeAsciiFormatString = _timeAsciiFormatString->text();
   config._dataRate = _dataRate->value();
   config._offsetDateTime = _offsetDateTime->isChecked();
@@ -238,6 +239,7 @@ void AsciiConfigWidgetInternal::setConfig(const AsciiSourceConfig& config)
   _limitFileBufferSize->setValue(config._limitFileBufferSize / 1024 / 1024);
 
   _useThreads->setChecked(config._useThreads);
+  _fileRolling->setChecked(config._fileRolling);
   _timeAsciiFormatString->setText(config._timeAsciiFormatString);
   _dataRate->setValue(config._dataRate.value());
   _offsetDateTime->setChecked(config._offsetDateTime.value());

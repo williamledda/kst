@@ -35,6 +35,7 @@ class KSTCORE_EXPORT UpdateManager : public QObject
 
     void setStore(ObjectStore *store) {_store = store;}
 
+    void askToReload() {emit dataSourceAskToReload();}
 
   public Q_SLOTS:
     void doUpdates(bool forceImmediate = false);
@@ -43,6 +44,7 @@ class KSTCORE_EXPORT UpdateManager : public QObject
 
   Q_SIGNALS:
     void objectsUpdated(qint64 serial);
+    void dataSourceAskToReload();
 
   private:
     UpdateManager();
